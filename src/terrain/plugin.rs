@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use super::Grid;
+use crate::cube_logic::{compute_color, grid::Grid};
 
 pub struct TerrainPlugin;
 
@@ -17,8 +17,8 @@ impl Plugin for TerrainPlugin {
 pub struct WorldData {
     pub temperature: Grid,
 }
-#[derive(Component)]
-pub struct GridCube(pub AssetId<ColorMaterial>);
+// #[derive(Component)]
+// pub struct GridCube(pub AssetId<ColorMaterial>);
 
 fn spawn_terrain(
     mut commands: Commands,
@@ -27,7 +27,7 @@ fn spawn_terrain(
     mut world_data: ResMut<WorldData>,
 ) {
     let (min, max) = world_data.temperature.get_minmax();
-    let origin = world_data.temperature.origin;
+    let _origin = world_data.temperature.origin;
     let dx = world_data.temperature.dx;
     let dy = world_data.temperature.dy;
 
@@ -55,22 +55,12 @@ fn spawn_terrain(
                     } else {
                         panic!("ColorAsset must be None")
                     }
-                    // commit test comment
                     commands.spawn((
-                        GridCube(asset_id),
+                        // GridCube(asset_id),
                         Mesh2d(meshes.add(Rectangle::new(10.0, 10.0))),
                         MeshMaterial2d(color_handle),
                         Transform::from_xyz(x, y, 0.0),
                     ));
                 });
         });
-}
-
-pub fn compute_color(min_max: (f32, f32), temperature: f32) -> ColorMaterial {
-    let (min, max) = min_max;
-    let green = 0.0;
-    let median = (max + min) / 2.;
-    let red = ((temperature - median) / (max - median)).clamp(0.0, 1.0);
-    let blue = ((median - temperature) / (median - min)).clamp(0.0, 1.0);
-    ColorMaterial::from_color(Color::linear_rgba(red, green, blue, 1.))
 }

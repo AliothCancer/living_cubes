@@ -1,3 +1,4 @@
+mod cube_logic;
 mod terrain;
 
 use crate::terrain::plugin::{TerrainPlugin, WorldData};
