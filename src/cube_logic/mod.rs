@@ -1,6 +1,10 @@
-use std::ops::{Add, Div};
+use std::ops::{Add, ControlFlow, Div};
 
-use bevy::{color::Color, sprite::ColorMaterial};
+use bevy::{
+    color::{Color, LinearRgba},
+    sprite::ColorMaterial,
+};
+use rand_distr::num_traits::Inv;
 
 pub mod grid;
 
@@ -48,15 +52,38 @@ impl Div for ColorWeights {
 pub struct NearCube {
     color: ColorWeights,
     distance: f32,
+    temperature: f32,
 }
 
 /// TODO! Dovrei calcolare il colore solo sulla temperatura in modo simile a quello che ho fatto
 /// con compute_colore
 /// Compute the color of the cube based on the distance from near temperature points
 /// as the geometric mean of the points
-pub fn cube_temperature(near_cubes_color: Vec<NearCube>) -> ColorWeights {
-    todo!();
+pub fn cube_color(min_max: (f32, f32), near_cubes_color: Vec<NearCube>) -> ColorMaterial {
+    let mut total_temp_dist_ratios = 0.0;
+    let mut total_inverse_distance = 0.0;
+
+    for cube in near_cubes_color.iter() {
+        if cube.distance < 0.1 {
+            return ColorMaterial::from_color(LinearRgba::new(
+                cube.color.red,
+                0.0,
+                cube.color.blue,
+                0.9,
+            ));
+        }
+
+        total_temp_dist_ratios += cube.temperature / cube.distance;
+        total_inverse_distance += 1.0 / cube.distance;
+    }
+
+    let mean_temperature = total_temp_dist_ratios / total_inverse_distance;
+    compute_color(min_max, mean_temperature)
+}
+
+/* old algorithm
     let mut total_distance = 0.0;
+
     near_cubes_color
         .iter()
         .map(|near_cube| {
@@ -71,5 +98,6 @@ pub fn cube_temperature(near_cubes_color: Vec<NearCube>) -> ColorWeights {
         .div(ColorWeights {
             red: total_distance,
             blue: total_distance,
-        })
-}
+        });
+
+*/
