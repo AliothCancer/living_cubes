@@ -92,7 +92,7 @@ impl Grid {
                             cube_coor.distance(Vec2::new(x as f32 * self.dx, y as f32 * self.dy));
                         let color = compute_color(self.get_minmax(), temperature)
                             .color
-                            .to_linear();
+                            .to_srgba();
                         let red = color.red;
                         let blue = color.blue;
                         NearCube::new(ColorWeights { red, blue }, distance, temperature)

@@ -13,6 +13,7 @@ use bevy::{
 
 fn main() {
     App::new()
+        //.insert_resource(ClearColor(Color::WHITE))
         .add_plugins((DefaultPlugins, TerrainPlugin))
         .add_systems(Startup, (setup_camera, spawn_cube))
         .add_systems(Update, (move_cube, update_camera))
@@ -26,11 +27,12 @@ fn spawn_cube(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
+    let size = 300.0;
     commands.spawn((
         Cube,
         Transform::from_xyz(0.0, 0.0, 0.0),
-        Mesh2d(meshes.add(Rectangle::new(30.0, 30.0))),
-        MeshMaterial2d(materials.add(ColorMaterial::from_color(LinearRgba::new(
+        Mesh2d(meshes.add(Rectangle::new(size, size))),
+        MeshMaterial2d(materials.add(ColorMaterial::from_color(Color::srgba(
             1.0, 1.0, 1.0, 1.0,
         )))),
     ));
@@ -53,7 +55,7 @@ fn move_cube(
     // posizione del valore di temperatura nell'array della grid
     let x_index = (cube_coor.x / dx) as usize;
     let y_index = (cube_coor.y / dy) as usize;
-    info!("{:?}", (x_index, y_index));
+    // info!("{:?}", (x_index, y_index));
     // 2. Use the temperature of the point to colorize the cube
     let near_cubes = world_data.temperature.get_near_cubes(
         x_index,
@@ -102,11 +104,12 @@ fn setup_camera(mut commands: Commands) {
 fn update_camera(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut camera_query: Query<&mut Transform, With<Camera2d>>,
+    tracking_obj: Query<&Transform, (With<Cube>, Without<Camera2d>)>,
     mouse_scroll: Res<AccumulatedMouseScroll>,
     // time: Res<Time>,
 ) {
     let mut cam_transform = camera_query.single_mut().unwrap();
-
+    cam_transform.translation = tracking_obj.single().unwrap().translation.clone();
     let speed = 5.0;
     if keyboard_input.pressed(KeyCode::ArrowUp) {
         cam_transform.translation.y += speed;

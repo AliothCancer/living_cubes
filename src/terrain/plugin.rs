@@ -6,8 +6,10 @@ pub struct TerrainPlugin;
 
 impl Plugin for TerrainPlugin {
     fn build(&self, app: &mut App) {
+        let dx = 200.0;
+        let square_size = 20;
         app.insert_resource::<WorldData>(WorldData {
-            temperature: Grid::generate(10, 20, 90., 90.),
+            temperature: Grid::generate(square_size, square_size, dx, dx),
         })
         .add_systems(Startup, spawn_terrain);
     }

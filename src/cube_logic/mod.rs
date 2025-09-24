@@ -1,7 +1,7 @@
 use std::ops::{Add, Div};
 
 use bevy::{
-    color::{Color, LinearRgba},
+    color::{Color, Luminance, Saturation},
     sprite::ColorMaterial,
 };
 
@@ -14,7 +14,7 @@ pub fn compute_color(min_max: (f32, f32), temperature: f32) -> ColorMaterial {
     let median = (max + min) / 2.;
     let red = ((temperature - median) / (max - median)).clamp(0.0, 1.0);
     let blue = ((median - temperature) / (median - min)).clamp(0.0, 1.0);
-    ColorMaterial::from_color(Color::linear_rgba(red, green, blue, 1.))
+    ColorMaterial::from_color(Color::srgba(red, green, blue, 1.0).with_saturation(3.0))
 }
 
 pub struct ColorWeights {
@@ -23,7 +23,7 @@ pub struct ColorWeights {
 }
 
 impl ColorWeights {
-    pub fn new(red: f32, blue: f32) -> Self {
+    pub fn _new(red: f32, blue: f32) -> Self {
         Self { red, blue }
     }
 }
@@ -64,8 +64,6 @@ impl NearCube {
     }
 }
 
-/// TODO! Dovrei calcolare il colore solo sulla temperatura in modo simile a quello che ho fatto
-/// con compute_colore
 /// Compute the color of the cube based on the distance from near temperature points
 /// as the geometric mean of the points
 pub fn cube_color(min_max: (f32, f32), near_cubes: Vec<NearCube>) -> ColorMaterial {
@@ -74,7 +72,7 @@ pub fn cube_color(min_max: (f32, f32), near_cubes: Vec<NearCube>) -> ColorMateri
 
     for cube in near_cubes.iter() {
         if cube.distance < 0.1 {
-            return ColorMaterial::from_color(LinearRgba::new(
+            return ColorMaterial::from_color(Color::srgba(
                 cube.color.red,
                 0.0,
                 cube.color.blue,
