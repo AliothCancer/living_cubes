@@ -1,7 +1,7 @@
 use std::ops::{Add, Div};
 
 use bevy::{
-    color::{Color, Luminance, Saturation},
+    color::Color,
     sprite::ColorMaterial,
 };
 
@@ -11,12 +11,23 @@ pub mod grid;
 pub fn compute_color(min_max: (f32, f32), temperature: f32) -> ColorMaterial {
     let (min, max) = min_max;
     let green = 0.0;
-    let median = (max + min) / 2.;
-    let red = ((temperature - median) / (max - median)).clamp(0.0, 1.0);
-    let blue = ((median - temperature) / (median - min)).clamp(0.0, 1.0);
-    ColorMaterial::from_color(Color::srgba(red, green, blue, 1.0).with_saturation(3.0))
+    let median = (max + min) / 2.0;
+    let red = ((temperature - median) / (max - median)).clamp(0.0, 3.0);
+    let blue = ((median - temperature) / (median - min)).clamp(0.0, 3.0);
+    
+    // Intensità basata su quanto ci si allontana dalla mediana
+    let distance_from_median = (temperature - median).abs() / ((max - min) / 2.0);
+    let bloom_multiplier = 1.0 + distance_from_median * 3.0; // Da 1.0 a 4.0
+    
+    ColorMaterial::from_color(
+        Color::srgba(
+            red * bloom_multiplier, 
+            green, 
+            blue * bloom_multiplier, 
+            1.0
+        )
+    )
 }
-
 pub struct ColorWeights {
     red: f32,
     blue: f32,

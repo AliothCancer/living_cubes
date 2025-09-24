@@ -11,6 +11,8 @@ use bevy::{
     prelude::*,
 };
 
+
+
 fn main() {
     App::new()
         //.insert_resource(ClearColor(Color::WHITE))
@@ -27,7 +29,7 @@ fn spawn_cube(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
-    let size = 300.0;
+    let size = 30.0;
     commands.spawn((
         Cube,
         Transform::from_xyz(0.0, 0.0, 0.0),
@@ -89,7 +91,10 @@ fn move_cube(
 }
 
 fn setup_camera(mut commands: Commands) {
+    let mut persp = OrthographicProjection::default_2d();
+    persp.scale = 0.1;
     commands.spawn((
+        Projection::from(persp),
         Transform::from_xyz(0.0, 0.0, 0.0),
         Camera2d,
         Camera {
@@ -109,7 +114,7 @@ fn update_camera(
     // time: Res<Time>,
 ) {
     let mut cam_transform = camera_query.single_mut().unwrap();
-    cam_transform.translation = tracking_obj.single().unwrap().translation.clone();
+    cam_transform.translation = tracking_obj.single().unwrap().translation;
     let speed = 5.0;
     if keyboard_input.pressed(KeyCode::ArrowUp) {
         cam_transform.translation.y += speed;
