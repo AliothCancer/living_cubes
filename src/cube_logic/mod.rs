@@ -1,10 +1,9 @@
-use std::ops::{Add, ControlFlow, Div};
+use std::ops::{Add, Div};
 
 use bevy::{
     color::{Color, LinearRgba},
     sprite::ColorMaterial,
 };
-use rand_distr::num_traits::Inv;
 
 pub mod grid;
 
@@ -55,15 +54,25 @@ pub struct NearCube {
     temperature: f32,
 }
 
+impl NearCube {
+    pub fn new(color: ColorWeights, distance: f32, temperature: f32) -> Self {
+        Self {
+            color,
+            distance,
+            temperature,
+        }
+    }
+}
+
 /// TODO! Dovrei calcolare il colore solo sulla temperatura in modo simile a quello che ho fatto
 /// con compute_colore
 /// Compute the color of the cube based on the distance from near temperature points
 /// as the geometric mean of the points
-pub fn cube_color(min_max: (f32, f32), near_cubes_color: Vec<NearCube>) -> ColorMaterial {
+pub fn cube_color(min_max: (f32, f32), near_cubes: Vec<NearCube>) -> ColorMaterial {
     let mut total_temp_dist_ratios = 0.0;
     let mut total_inverse_distance = 0.0;
 
-    for cube in near_cubes_color.iter() {
+    for cube in near_cubes.iter() {
         if cube.distance < 0.1 {
             return ColorMaterial::from_color(LinearRgba::new(
                 cube.color.red,

@@ -1,7 +1,9 @@
-use bevy::{asset::AssetId, math::Vec2, sprite::ColorMaterial};
+use bevy::{asset::AssetId, log::info, math::Vec2, sprite::ColorMaterial};
 use ndarray::*;
 use rand::rng;
 use rand_distr::{Distribution, Uniform};
+
+use crate::cube_logic::{ColorWeights, NearCube, compute_color};
 
 pub struct Grid {
     pub values: Array2<(f32, Option<AssetId<ColorMaterial>>)>,
@@ -23,10 +25,7 @@ pub trait ToKelvin {
 impl ToKelvin for f32 {}
 
 impl Grid {
-    pub fn get_value(&self, x: f32, y: f32) -> Option<&(f32, Option<AssetId<ColorMaterial>>)> {
-        let x = x as usize;
-        let y = y as usize;
-
+    pub fn get_value(&self, x: usize, y: usize) -> Option<&(f32, Option<AssetId<ColorMaterial>>)> {
         self.values.get((x, y))
     }
     pub fn get_dxdy(&self) -> (f32, f32) {
@@ -56,4 +55,56 @@ impl Grid {
     pub fn get_minmax(&self) -> (f32, f32) {
         (self.min, self.max)
     }
+
+    /// This func will return the adjacent elements of the given (x,y) element
+    pub fn get_near_cubes(
+        &self,
+        x: usize,
+        y: usize,
+        quantity: AdjacentCubeQuantity,
+        cube_coor: Vec2,
+    ) -> Vec<NearCube> {
+        let x_max = self.values.len_of(Axis(0)) as i32 - 1;
+        let y_max = self.values.len_of(Axis(1)) as i32 - 1;
+
+        match quantity {
+            AdjacentCubeQuantity::ThreeByThree => {
+                let relative_indexes =
+                    (-2..=2).flat_map(|x_rel: i32| (-2..=2).map(move |y_rel: i32| (x_rel, y_rel)));
+                relative_indexes
+                    .map(|(x_rel, y_rel)| {
+                        let x = match x as i32 + x_rel {
+                            ..=0 => 0,
+                            val if val > x_max => x_max,
+                            val => val,
+                        };
+                        let y = match y as i32 + y_rel {
+                            ..=0 => 0,
+                            val if val > y_max => y_max,
+                            val => val,
+                        };
+
+                        let temperature = match self.get_value(x as usize, y as usize) {
+                            Some(val) => val.0,
+                            None => panic!("None on indexes {:?}", (x as usize, y as usize)),
+                        };
+                        let distance =
+                            cube_coor.distance(Vec2::new(x as f32 * self.dx, y as f32 * self.dy));
+                        let color = compute_color(self.get_minmax(), temperature)
+                            .color
+                            .to_linear();
+                        let red = color.red;
+                        let blue = color.blue;
+                        NearCube::new(ColorWeights { red, blue }, distance, temperature)
+                    })
+                    .collect::<Vec<NearCube>>()
+            }
+            AdjacentCubeQuantity::FourByFour => todo!(),
+        }
+    }
+}
+
+pub enum AdjacentCubeQuantity {
+    ThreeByThree,
+    FourByFour,
 }
