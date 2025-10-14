@@ -1,33 +1,21 @@
 use std::ops::{Add, Div};
 
-use bevy::{
-    color::Color,
-    sprite::ColorMaterial,
-};
+use bevy::color::Color;
 
-pub mod grid;
-
-/// This color is the one associated with one point of the grid, not the color of the cube
-pub fn compute_color(min_max: (f32, f32), temperature: f32) -> ColorMaterial {
+pub fn compute_color(min_max: (f32, f32), temperature: f32) -> Color {
     let (min, max) = min_max;
     let green = 0.0;
     let median = (max + min) / 2.0;
     let red = ((temperature - median) / (max - median)).clamp(0.0, 3.0);
     let blue = ((median - temperature) / (median - min)).clamp(0.0, 3.0);
-    
+
     // Intensità basata su quanto ci si allontana dalla mediana
     let distance_from_median = (temperature - median).abs() / ((max - min) / 2.0);
     let bloom_multiplier = 1.0 + distance_from_median * 3.0; // Da 1.0 a 4.0
-    
-    ColorMaterial::from_color(
-        Color::srgba(
-            red * bloom_multiplier, 
-            green, 
-            blue * bloom_multiplier, 
-            1.0
-        )
-    )
+
+    Color::srgba(red * bloom_multiplier, green, blue * bloom_multiplier, 0.7)
 }
+
 pub struct ColorWeights {
     red: f32,
     blue: f32,
@@ -77,18 +65,13 @@ impl NearCube {
 
 /// Compute the color of the cube based on the distance from near temperature points
 /// as the geometric mean of the points
-pub fn cube_color(min_max: (f32, f32), near_cubes: Vec<NearCube>) -> ColorMaterial {
+pub fn cube_color(min_max: (f32, f32), near_cubes: Vec<NearCube>) -> Color {
     let mut total_temp_dist_ratios = 0.0;
     let mut total_inverse_distance = 0.0;
 
     for cube in near_cubes.iter() {
         if cube.distance < 0.1 {
-            return ColorMaterial::from_color(Color::srgba(
-                cube.color.red,
-                0.0,
-                cube.color.blue,
-                0.9,
-            ));
+            return Color::srgba(cube.color.red, 0.0, cube.color.blue, 0.9);
         }
 
         total_temp_dist_ratios += cube.temperature / cube.distance;

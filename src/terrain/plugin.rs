@@ -9,7 +9,7 @@ impl Plugin for TerrainPlugin {
         let dx = 400.0;
         let square_size = 20;
         app.insert_resource::<WorldData>(WorldData {
-            temperature: Grid::generate(square_size, square_size, dx, dx),
+            temperature: Grid::new(square_size, square_size, dx, dx),
         })
         .add_systems(Startup, spawn_terrain);
     }
@@ -35,7 +35,7 @@ fn spawn_terrain(
 
     world_data
         .temperature
-        .values
+        .matrix
         .rows_mut()
         .into_iter()
         .enumerate()

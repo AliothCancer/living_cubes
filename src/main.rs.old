@@ -1,8 +1,10 @@
 mod cube_logic;
-mod grid_plugin;
 mod terrain;
 
-use crate::{cube_logic::cube_color, grid_plugin::GridPlugin};
+use crate::{
+    cube_logic::cube_color,
+    terrain::plugin::{TerrainPlugin, WorldData},
+};
 use bevy::{
     core_pipeline::{bloom::Bloom, tonemapping::Tonemapping},
     input::mouse::AccumulatedMouseScroll,
@@ -12,10 +14,9 @@ use bevy::{
 fn main() {
     App::new()
         //.insert_resource(ClearColor(Color::WHITE))
-        .add_plugins((DefaultPlugins, GridPlugin))
+        .add_plugins((DefaultPlugins, TerrainPlugin))
         .add_systems(Startup, (setup_camera, spawn_cube))
-        .add_systems(Update, update_camera)
-        .add_systems(Update, (move_cube, update_color_cube))
+        .add_systems(Update, (move_cube, update_camera))
         .run();
 }
 
@@ -41,37 +42,16 @@ fn spawn_cube(
 }
 
 fn move_cube(
+    mut commands: Commands,
     keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut cube_query: Query<&mut Transform, With<Cube>>,
-) {
-    let mut cube_transform = cube_query.single_mut().unwrap();
-    // update cube color
-    // 1. Use cube coordinate to find the point in the grid
-    // move cube
-    let speed = 5.0;
-    if keyboard_input.pressed(KeyCode::KeyW) {
-        cube_transform.translation.y += speed;
-    }
-    if keyboard_input.pressed(KeyCode::KeyS) {
-        cube_transform.translation.y -= speed;
-    }
-    if keyboard_input.pressed(KeyCode::KeyA) {
-        cube_transform.translation.x -= speed;
-    }
-    if keyboard_input.pressed(KeyCode::KeyD) {
-        cube_transform.translation.x += speed;
-    }
-}
-
-fn update_color_cube(
     mut materials: ResMut<Assets<ColorMaterial>>,
-    mut cube_query: Query<(&mut Cube, &mut Transform)>,
-    world_data: Res<Grid>,
+    mut cube_query: Query<(&mut Transform, &mut Cube), With<Cube>>,
+    world_data: Res<WorldData>,
 ) {
-    let (cube, transform) = cube_query.single_mut().unwrap();
+    let (mut cube_transform, cube) = cube_query.single_mut().unwrap();
     // update cube color
     // 1. Use cube coordinate to find the point in the grid
-    let cube_coor = transform.translation;
+    let cube_coor = cube_transform.translation;
     let (dx, dy) = world_data.temperature.get_dxdy();
 
     // posizione del valore di temperatura nell'array della grid
@@ -87,10 +67,26 @@ fn update_color_cube(
     );
 
     let color = cube_color(world_data.temperature.get_minmax(), near_cubes);
-    if let Some(_local_temperature) = world_data.temperature.get_value(x_index, y_index)
-        && let Some(mat) = materials.get_mut(&cube.color_id)
-    {
-        mat.color = color;
+    if let Some(_local_temperature) = world_data.temperature.get_value(x_index, y_index) {
+        // let id = local_temperature.1.unwrap();
+        if let Some(mat) = materials.get_mut() {
+            mat.color = color;
+        }
+    }
+
+    // move cube
+    let speed = 5.0;
+    if keyboard_input.pressed(KeyCode::KeyW) {
+        cube_transform.translation.y += speed;
+    }
+    if keyboard_input.pressed(KeyCode::KeyS) {
+        cube_transform.translation.y -= speed;
+    }
+    if keyboard_input.pressed(KeyCode::KeyA) {
+        cube_transform.translation.x -= speed;
+    }
+    if keyboard_input.pressed(KeyCode::KeyD) {
+        cube_transform.translation.x += speed;
     }
 }
 
