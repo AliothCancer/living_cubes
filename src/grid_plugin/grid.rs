@@ -7,7 +7,7 @@ use rand::rng;
 use rand_distr::{Distribution, Uniform};
 
 use crate::{
-    cube_logic::{ColorWeights, NearCube, compute_color},
+    cube::{ColorWeights, NearCube, compute_color},
     grid_plugin::GridCell,
 };
 
@@ -24,22 +24,8 @@ pub struct Grid {
     pub dy: f32,
     pub origin: Vec2,
 }
-pub struct GridCoor {
-    row: usize,
-    col: usize,
-}
-
-impl Into<GridCoor> for (f32, f32) {
-    fn into(self) -> GridCoor {
-        GridCoor {
-            row: self.0,
-            col: self.1,
-        }
-    }
-}
 
 impl Grid {
-    pub fn into_row_col(x: f32, y: f32) -> GridCoor {}
     pub fn get_value(&self, x: usize, y: usize) -> Option<&GridCell> {
         self.matrix.get((x, y))
     }
@@ -59,13 +45,15 @@ impl Grid {
                 let temperature = distr.sample(&mut rng);
                 let color = compute_color((min, max), temperature);
                 let asset_id = materials.add(ColorMaterial::from_color(color));
-                let row = row as f32 * dy;
-                let col = col as f32 * dx;
+                let y = row as f32 * dy;
+                let x = col as f32 * dx;
                 GridCell {
                     temperature,
                     asset_id,
                     row,
                     col,
+                    x,
+                    y,
                 }
             })
         };
@@ -89,7 +77,6 @@ impl Grid {
     pub fn get_minmax(&self) -> (f32, f32) {
         (self.min, self.max)
     }
-    pub fn compute_color(&self, row: usize, col: usize) -> Color {}
     /// This func will return the adjacent elements of the given (x,y) element
     pub fn get_near_cubes<'a>(
         &'a self,

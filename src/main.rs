@@ -1,8 +1,8 @@
-mod cube_logic;
+mod cube;
 mod grid_plugin;
 
 use crate::{
-    cube_logic::{compute_color, cube_color},
+    cube::{compute_color, cube_color},
     grid_plugin::{
         GridPlugin,
         grid::{AdjacentCubeQuantity, Grid},
@@ -20,7 +20,7 @@ fn main() {
         .add_plugins((DefaultPlugins, GridPlugin))
         .add_systems(Startup, (setup_camera, spawn_cube))
         .add_systems(Update, update_camera)
-        .add_systems(Update, (move_cube, update_color_cube))
+        .add_systems(Update, (move_cube, update_cube))
         .run();
 }
 
@@ -45,51 +45,57 @@ fn spawn_cube(
     ));
 }
 
-fn move_cube(
-    keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut cube_query: Query<&mut Transform, With<Cube>>,
-) {
-    let mut cube_transform = cube_query.single_mut().unwrap();
-    // update cube color
-    // 1. Use cube coordinate to find the point in the grid
-    // move cube
+fn move_cube(keyboard_input: Res<ButtonInput<KeyCode>>, translation: &mut Vec3) {
     let speed = 5.0;
     if keyboard_input.pressed(KeyCode::KeyW) {
-        cube_transform.translation.y += speed;
+        translation.y += speed;
     }
     if keyboard_input.pressed(KeyCode::KeyS) {
-        cube_transform.translation.y -= speed;
+        translation.y -= speed;
     }
     if keyboard_input.pressed(KeyCode::KeyA) {
-        cube_transform.translation.x -= speed;
+        translation.x -= speed;
     }
     if keyboard_input.pressed(KeyCode::KeyD) {
-        cube_transform.translation.x += speed;
+        translation.x += speed;
     }
 }
 
-fn update_color_cube(
+fn update_cube(
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut cube_query: Query<(&mut Cube, &mut Transform)>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
     grid: Res<Grid>,
 ) {
-    let (cube, transform) = cube_query.single_mut().unwrap();
+    let (cube, mut transform) = cube_query.single_mut().unwrap();
+
+    move_cube(keyboard_input, &mut transform.translation);
     // update cube color
     // 1. Use cube coordinate to find the point in the grid
     let cube_coor = transform.translation;
 
     // posizione del valore di temperatura nell'array della grid
-    let col = (cube_coor.x / grid.dx) as usize;
-    let row = (cube_coor.y / grid.dy) as usize;
-    // info!("{:?}", (x_index, y_index));
-    // 2. Use the temperature of the point to colorize the cube
-
-    // Update the color cube's Material mutating
-    // it from Material Resources accessing
-    // using the `Handle` save in GridCell
-
-    if let Some(mat) = materials.get_mut(&cube.color_id) {
-        mat.color = grid.compute_color();
+    let nearest_point = grid.find_nearest_cell(transform.translation.x, transform.translation.y);
+    // TODO!!!!!
+    // - implement the find_nearest_cell mehtod
+    // - get the direction
+    // - understand in which quadrant the cube is based on the direction:
+    //      - Top L
+    //      - Top R
+    //      - Bottom L
+    //      - Bottom R
+    // - Get the sub-grid The GridCells to compute the distace weighted temperature
+    // - Compute the color
+    // - Update the color of the cube
+}
+/// The piece of code which actually update the color of the cube
+fn update_cube_color(
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    cube_color_id: &Handle<ColorMaterial>,
+    color: Color,
+) {
+    if let Some(mat) = materials.get_mut(cube_color_id) {
+        mat.color = color;
     }
 }
 

@@ -1,4 +1,5 @@
 pub mod grid;
+pub mod temperature;
 
 use crate::grid_plugin::grid::Grid;
 use bevy::prelude::*;
@@ -29,7 +30,7 @@ fn setup(
     let batch = grid.matrix.map(|cell| {
         (
             DebugCube,
-            Transform::from_xyz(cell.col, cell.row, 0.0),
+            Transform::from_xyz(cell.col as f32, cell.row as f32, 0.0),
             Mesh2d(meshes.add(Rectangle::new(10.0, 10.0))),
             MeshMaterial2d(cell.asset_id.clone()),
         )
@@ -44,8 +45,10 @@ pub struct DebugCube;
 pub struct GridCell {
     temperature: f32,
     asset_id: Handle<ColorMaterial>,
-    row: f32,
-    col: f32,
+    row: usize,
+    col: usize,
+    x: f32,
+    y: f32,
 }
 
 pub trait ToKelvin {
