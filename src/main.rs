@@ -1,8 +1,13 @@
 mod cube_logic;
 mod grid_plugin;
-mod terrain;
 
-use crate::{cube_logic::cube_color, grid_plugin::GridPlugin};
+use crate::{
+    cube_logic::{compute_color, cube_color},
+    grid_plugin::{
+        GridPlugin,
+        grid::{AdjacentCubeQuantity, Grid},
+    },
+};
 use bevy::{
     core_pipeline::{bloom::Bloom, tonemapping::Tonemapping},
     input::mouse::AccumulatedMouseScroll,
@@ -66,31 +71,25 @@ fn move_cube(
 fn update_color_cube(
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut cube_query: Query<(&mut Cube, &mut Transform)>,
-    world_data: Res<Grid>,
+    grid: Res<Grid>,
 ) {
     let (cube, transform) = cube_query.single_mut().unwrap();
     // update cube color
     // 1. Use cube coordinate to find the point in the grid
     let cube_coor = transform.translation;
-    let (dx, dy) = world_data.temperature.get_dxdy();
 
     // posizione del valore di temperatura nell'array della grid
-    let x_index = (cube_coor.x / dx) as usize;
-    let y_index = (cube_coor.y / dy) as usize;
+    let col = (cube_coor.x / grid.dx) as usize;
+    let row = (cube_coor.y / grid.dy) as usize;
     // info!("{:?}", (x_index, y_index));
     // 2. Use the temperature of the point to colorize the cube
-    let near_cubes = world_data.temperature.get_near_cubes(
-        x_index,
-        y_index,
-        cube_logic::grid::AdjacentCubeQuantity::ThreeByThree,
-        Vec2::new(cube_coor.x, cube_coor.y),
-    );
 
-    let color = cube_color(world_data.temperature.get_minmax(), near_cubes);
-    if let Some(_local_temperature) = world_data.temperature.get_value(x_index, y_index)
-        && let Some(mat) = materials.get_mut(&cube.color_id)
-    {
-        mat.color = color;
+    // Update the color cube's Material mutating
+    // it from Material Resources accessing
+    // using the `Handle` save in GridCell
+
+    if let Some(mat) = materials.get_mut(&cube.color_id) {
+        mat.color = grid.compute_color();
     }
 }
 

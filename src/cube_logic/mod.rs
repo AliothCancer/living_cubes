@@ -17,8 +17,8 @@ pub fn compute_color(min_max: (f32, f32), temperature: f32) -> Color {
 }
 
 pub struct ColorWeights {
-    red: f32,
-    blue: f32,
+    pub red: f32,
+    pub blue: f32,
 }
 
 impl ColorWeights {

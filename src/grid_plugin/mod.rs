@@ -13,7 +13,7 @@ impl Plugin for GridPlugin {
 
 fn setup(
     mut commands: Commands,
-    meshes: ResMut<Assets<Mesh>>,
+    mut meshes: ResMut<Assets<Mesh>>,
     materials: ResMut<Assets<ColorMaterial>>,
 ) {
     let grid_side_length = 20;
@@ -23,22 +23,29 @@ fn setup(
         grid_side_length,
         x_space,
         x_space,
-        meshes,
         materials,
     );
-    commands.insert_resource(grid);
 
-    grid.matrix.map(|cell|{
-        (DebugCube, Transform)
+    let batch = grid.matrix.map(|cell| {
+        (
+            DebugCube,
+            Transform::from_xyz(cell.col, cell.row, 0.0),
+            Mesh2d(meshes.add(Rectangle::new(10.0, 10.0))),
+            MeshMaterial2d(cell.asset_id.clone()),
+        )
     });
+    commands.spawn_batch(batch);
+    commands.insert_resource(grid);
 }
 
 #[derive(Component)]
-pub DebugCube;
+pub struct DebugCube;
 
 pub struct GridCell {
     temperature: f32,
     asset_id: Handle<ColorMaterial>,
+    row: f32,
+    col: f32,
 }
 
 pub trait ToKelvin {
