@@ -2,10 +2,11 @@ mod cube;
 mod grid_plugin;
 
 use crate::{
-    cube::{compute_color, cube_color},
+    cube::compute_color,
     grid_plugin::{
         GridPlugin,
-        grid::{AdjacentCubeQuantity, Grid},
+        coordinate::{GameCoor, GridCoor},
+        grid::{Grid, GridCell, X_SPACE, Y_SPACE},
     },
 };
 use bevy::{
@@ -20,13 +21,14 @@ fn main() {
         .add_plugins((DefaultPlugins, GridPlugin))
         .add_systems(Startup, (setup_camera, spawn_cube))
         .add_systems(Update, update_camera)
-        .add_systems(Update, (move_cube, update_cube))
+        .add_systems(Update, update_cube)
         .run();
 }
 
 #[derive(Component)]
 struct Cube {
     color_id: Handle<ColorMaterial>,
+    nearest_cell: GridCell,
 }
 fn spawn_cube(
     mut commands: Commands,
@@ -38,6 +40,7 @@ fn spawn_cube(
     commands.spawn((
         Cube {
             color_id: color_id.clone(),
+            nearest_cell: GridCell::default(),
         },
         Transform::from_xyz(0.0, 0.0, 0.0),
         Mesh2d(meshes.add(Rectangle::new(size, size))),
@@ -62,46 +65,60 @@ fn move_cube(keyboard_input: Res<ButtonInput<KeyCode>>, translation: &mut Vec3) 
 }
 
 fn update_cube(
+    mut commands: Commands,
     mut materials: ResMut<Assets<ColorMaterial>>,
+    mut meshes: ResMut<Assets<Mesh>>,
     mut cube_query: Query<(&mut Cube, &mut Transform)>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     grid: Res<Grid>,
 ) {
-    let (cube, mut transform) = cube_query.single_mut().unwrap();
+    let (mut cube, mut transform) = cube_query.single_mut().unwrap();
 
     move_cube(keyboard_input, &mut transform.translation);
     // update cube color
     // 1. Use cube coordinate to find the point in the grid
     let cube_coor = transform.translation;
-
-    // posizione del valore di temperatura nell'array della grid
-    let nearest_point = grid.find_nearest_cell(transform.translation.x, transform.translation.y);
-    // TODO!!!!!
-    // - implement the find_nearest_cell mehtod
-    // - get the direction
-    // - understand in which quadrant the cube is based on the direction:
-    //      - Top L
-    //      - Top R
-    //      - Bottom L
-    //      - Bottom R
+    let current_cell = grid.find_nearest_cell(cube_coor);
+    let prev_cell = &cube.nearest_cell;
+    if prev_cell != &current_cell {
+        // dbg!(cube_coor);
+        info!("spawned new debug black cube");
+        commands.spawn((
+            Transform::from_xyz(
+                current_cell.bottom_left.x + X_SPACE / 2.,
+                current_cell.bottom_left.y + Y_SPACE / 2.,
+                -1.0,
+            ),
+            Mesh2d(meshes.add(Rectangle::new(X_SPACE, Y_SPACE))),
+            MeshMaterial2d(materials.add(Color::BLACK)),
+        ));
+        cube.nearest_cell = current_cell;
+    }
+    let temp = {
+        grid.get_value(GridCoor::from(GameCoor::from(cube.nearest_cell.top_right)))
+            .temperature
+    };
+    update_cube_color(materials, &cube.color_id, compute_color(temp));
+    // TODO!
     // - Get the sub-grid The GridCells to compute the distace weighted temperature
     // - Compute the color
     // - Update the color of the cube
 }
+
 /// The piece of code which actually update the color of the cube
 fn update_cube_color(
     mut materials: ResMut<Assets<ColorMaterial>>,
     cube_color_id: &Handle<ColorMaterial>,
-    color: Color,
+    new_color: Color,
 ) {
     if let Some(mat) = materials.get_mut(cube_color_id) {
-        mat.color = color;
+        mat.color = new_color;
     }
 }
 
 fn setup_camera(mut commands: Commands) {
     let mut persp = OrthographicProjection::default_2d();
-    persp.scale = 0.1;
+    persp.scale = 2.1;
     commands.spawn((
         Projection::from(persp),
         Transform::from_xyz(0.0, 0.0, 0.0),

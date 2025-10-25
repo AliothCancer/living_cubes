@@ -1,5 +1,3 @@
-use std::iter::FilterMap;
-
 use super::ToKelvin;
 use bevy::prelude::*;
 use ndarray::*;
@@ -8,158 +6,93 @@ use rand_distr::{Distribution, Uniform};
 
 use crate::{
     cube::{ColorWeights, NearCube, compute_color},
-    grid_plugin::GridCell,
+    grid_plugin::{
+        GridPoint,
+        coordinate::{GameCoor, GridCoor, GridStep, QualitativeRelPos, get_qualitative_position},
+    },
 };
+
+pub const COLS: usize = 20;
+pub const ROWS: usize = COLS;
+pub const X_SPACE: f32 = 100.0;
+pub const Y_SPACE: f32 = X_SPACE;
+pub const ORIGIN: Vec2 = Vec2 { x: 0.0, y: 0.0 };
+pub const MIN_TEMP: f32 = 15.0;
+pub const MAX_TEMP: f32 = 35.0;
 
 #[derive(Resource)]
 pub struct Grid {
-    pub matrix: Array2<GridCell>,
-    /// number of columns
-    pub cols: usize,
-    /// number of rows
-    pub rows: usize,
-    pub min: f32,
-    pub max: f32,
-    pub dx: f32,
-    pub dy: f32,
-    pub origin: Vec2,
+    pub matrix: Array2<GridPoint>,
 }
 
+#[derive(Debug, PartialEq, Default)]
+pub struct GridCell {
+    pub bottom_right: Vec2,
+    pub bottom_left: Vec2,
+    pub top_left: Vec2,
+    pub top_right: Vec2,
+}
+const LEFT: GridStep = GridStep { x: -1, y: 0 };
+const RIGHT: GridStep = GridStep { x: 1, y: 0 };
+const TOP: GridStep = GridStep { x: 0, y: 1 };
+const BOTTOM: GridStep = GridStep { x: 0, y: -1 };
+
 impl Grid {
-    pub fn get_value(&self, x: usize, y: usize) -> Option<&GridCell> {
-        self.matrix.get((x, y))
+    /// A cell is formed of 4 points, each of which is adjacent and forms a square
+    pub fn find_nearest_cell(&self, cube_coor: Vec3) -> GridCell {
+        let cube_coor_game = GameCoor::from(cube_coor);
+        let cube_coor_grid = GridCoor::from(cube_coor_game);
+        let rel_pos = get_qualitative_position(cube_coor_game, cube_coor_grid);
+
+        match rel_pos {
+            QualitativeRelPos::TopLeft => GridCell {
+                top_left: (cube_coor_grid + TOP + LEFT).into(),
+                top_right: (cube_coor_grid + TOP).into(),
+                bottom_left: (cube_coor_grid + LEFT).into(),
+                bottom_right: (cube_coor_grid).into(),
+            },
+            QualitativeRelPos::TopRight => GridCell {
+                top_right: (cube_coor_grid + TOP + RIGHT).into(),
+                top_left: (cube_coor_grid + TOP).into(),
+                bottom_right: (cube_coor_grid + RIGHT).into(),
+                bottom_left: (cube_coor_grid).into(),
+            },
+            QualitativeRelPos::BottomLeft => GridCell {
+                bottom_left: (cube_coor_grid + BOTTOM + LEFT).into(),
+                top_left: (cube_coor_grid + LEFT).into(),
+                bottom_right: (cube_coor_grid + BOTTOM).into(),
+                top_right: (cube_coor_grid).into(),
+            },
+            QualitativeRelPos::BottomRight => GridCell {
+                bottom_right: (cube_coor_grid + BOTTOM + RIGHT).into(),
+                bottom_left: (cube_coor_grid + BOTTOM).into(),
+                top_right: (cube_coor_grid + RIGHT).into(),
+                top_left: (cube_coor_grid).into(),
+            },
+        }
+    }
+    pub fn get_value(&self, coor: GridCoor) -> &GridPoint {
+        self.matrix.get((coor.x, coor.y)).unwrap()
     }
 
-    pub fn new(
-        cols: usize,
-        rows: usize,
-        dx: f32,
-        dy: f32,
-        mut materials: ResMut<Assets<ColorMaterial>>,
-    ) -> Grid {
-        let (min, max) = (f32::to_kelvin(15.0_f32), f32::to_kelvin(35.0_f32));
+    pub fn new(mut materials: ResMut<Assets<ColorMaterial>>) -> Grid {
         let matrix = {
             let mut rng = rng();
-            let distr = Uniform::new(min, max).unwrap();
-            Array2::from_shape_fn(Dim([cols, rows]), |(row, col)| {
+            let distr = Uniform::new(MIN_TEMP, MAX_TEMP).unwrap();
+            Array2::from_shape_fn(Dim([COLS, ROWS]), |(row, col)| {
                 let temperature = distr.sample(&mut rng);
-                let color = compute_color((min, max), temperature);
+                let color = compute_color(temperature);
                 let asset_id = materials.add(ColorMaterial::from_color(color));
-                let y = row as f32 * dy;
-                let x = col as f32 * dx;
-                GridCell {
+                let y = row as f32 * X_SPACE;
+                let x = col as f32 * Y_SPACE;
+                GridPoint {
                     temperature,
                     asset_id,
-                    row,
-                    col,
-                    x,
-                    y,
+                    grid_coor: GridCoor { y: row, x: col },
+                    game_coor: GameCoor { x, y },
                 }
             })
         };
-
-        let origin = Vec2 {
-            x: -(cols as f32) / 2. * dx,
-            y: -(rows as f32) / 2. * dy,
-        };
-        Grid {
-            matrix,
-            cols,
-            rows,
-            min,
-            max,
-            dx,
-            dy,
-            origin,
-        }
+        Grid { matrix }
     }
-
-    pub fn get_minmax(&self) -> (f32, f32) {
-        (self.min, self.max)
-    }
-    /// This func will return the adjacent elements of the given (x,y) element
-    pub fn get_near_cubes<'a>(
-        &'a self,
-        x: usize,
-        y: usize,
-        quantity: AdjacentCubeQuantity,
-        cube_coor: Vec2,
-    ) -> FilterMap<
-        std::array::IntoIter<[isize; 2], 8>,
-        impl FnMut([isize; 2]) -> Option<&'a GridCell>,
-    > {
-        ADJACENT_POSITIONS.into_iter().filter_map(move |rel| {
-            let row = x
-                .checked_add_signed(rel[0])
-                .expect(" Col got overflow/underflow");
-            let col = y
-                .checked_add_signed(rel[1])
-                .expect("Col got overflow/underflow");
-            self.matrix.get((row, col))
-        })
-
-        // let x_max = self.cols as i64 - 1;
-        // let y_max = self.rows as i64 - 1;
-        // match quantity {
-        //     AdjacentCubeQuantity::ThreeByThree => {
-        //         three_by_three((x, y), (x_max, y_max), self, cube_coor)
-        //     }
-        //     AdjacentCubeQuantity::FourByFour => todo!(),
-        // }
-    }
-}
-const ADJACENT_POSITIONS: [[isize; 2]; 8] = [
-    // positives
-    [0, 1],
-    [1, 0],
-    [1, 1],
-    // negatives
-    [0, -1],
-    [-1, 0],
-    [-1, -1],
-    // discordant
-    [1, -1],
-    [-1, 1],
-];
-fn three_by_three(
-    (x, y): (usize, usize),
-    (x_max, y_max): (i32, i32),
-    grid_ref: &Grid,
-    cube_coor: Vec2,
-) -> Vec<NearCube> {
-    let relative_indexes =
-        (-2..=2).flat_map(|x_rel: i32| (-2..=2).map(move |y_rel: i32| (x_rel, y_rel)));
-    relative_indexes
-        .map(|(x_rel, y_rel)| {
-            let x = match x as i32 + x_rel {
-                ..=0 => 0,
-                val if val > x_max => x_max,
-                val => val,
-            };
-            let y = match y as i32 + y_rel {
-                ..=0 => 0,
-                val if val > y_max => y_max,
-                val => val,
-            };
-
-            let temperature = match grid_ref.get_value(x as usize, y as usize) {
-                Some(cell) => cell.temperature,
-                None => panic!("None on indexes {:?}", (x as usize, y as usize)),
-            };
-            let distance =
-                cube_coor.distance(Vec2::new(x as f32 * grid_ref.dx, y as f32 * grid_ref.dy));
-            let mut red = 0.;
-            let mut blue = 0.;
-            if let Color::Srgba(color) = compute_color(grid_ref.get_minmax(), temperature) {
-                red = color.red;
-                blue = color.blue;
-            }
-            NearCube::new(ColorWeights { red, blue }, distance, temperature)
-        })
-        .collect::<Vec<NearCube>>()
-}
-
-pub enum AdjacentCubeQuantity {
-    ThreeByThree,
-    FourByFour,
 }

@@ -2,8 +2,6 @@ use std::iter::Zip;
 
 use rand_distr::num_traits::Inv;
 
-use crate::grid_plugin::grid::GridCoor;
-
 pub trait WeightedTemperature {
     fn weighted_temperature(self) -> f32;
 }

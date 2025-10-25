@@ -1,7 +1,11 @@
+pub mod coordinate;
 pub mod grid;
 pub mod temperature;
 
-use crate::grid_plugin::grid::Grid;
+use crate::grid_plugin::{
+    coordinate::{GameCoor, GridCoor},
+    grid::{Grid, X_SPACE},
+};
 use bevy::prelude::*;
 
 pub struct GridPlugin;
@@ -17,20 +21,12 @@ fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
     materials: ResMut<Assets<ColorMaterial>>,
 ) {
-    let grid_side_length = 20;
-    let x_space = 400.0;
-    let grid = Grid::new(
-        grid_side_length,
-        grid_side_length,
-        x_space,
-        x_space,
-        materials,
-    );
+    let grid = Grid::new(materials);
 
     let batch = grid.matrix.map(|cell| {
         (
             DebugCube,
-            Transform::from_xyz(cell.col as f32, cell.row as f32, 0.0),
+            Transform::from_xyz(cell.game_coor.x, cell.game_coor.y, 0.0),
             Mesh2d(meshes.add(Rectangle::new(10.0, 10.0))),
             MeshMaterial2d(cell.asset_id.clone()),
         )
@@ -42,13 +38,11 @@ fn setup(
 #[derive(Component)]
 pub struct DebugCube;
 
-pub struct GridCell {
-    temperature: f32,
-    asset_id: Handle<ColorMaterial>,
-    row: usize,
-    col: usize,
-    x: f32,
-    y: f32,
+pub struct GridPoint {
+    pub temperature: f32,
+    pub asset_id: Handle<ColorMaterial>,
+    pub game_coor: GameCoor,
+    pub grid_coor: GridCoor,
 }
 
 pub trait ToKelvin {
