@@ -2,7 +2,7 @@ use std::ops::Add;
 
 use bevy::math::{Vec2, Vec3};
 
-use super::grid::{COLS, ROWS, X_SPACE, Y_SPACE};
+use super::grid::{X_SPACE, Y_SPACE};
 
 pub struct GridStep {
     pub x: isize,
@@ -43,6 +43,17 @@ impl From<Vec2> for GameCoor {
             x: value.x,
             y: value.y,
         }
+    }
+}
+
+impl From<Vec2> for GridCoor {
+    fn from(value: Vec2) -> Self {
+        GridCoor::from(GameCoor::from(value))
+    }
+}
+impl From<Vec3> for GridCoor {
+    fn from(value: Vec3) -> Self {
+        GridCoor::from(GameCoor::from(value))
     }
 }
 
@@ -93,4 +104,8 @@ pub fn get_qualitative_position(coor_game: GameCoor, coor_grid: GridCoor) -> Qua
     } else {
         unreachable!()
     }
+}
+
+pub fn compute_distance(a: GameCoor, b: Vec2) -> f32 {
+    ((a.x - b.x).powi(2) + (a.y - b.y).powi(2)).sqrt()
 }

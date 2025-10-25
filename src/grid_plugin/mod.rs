@@ -4,7 +4,7 @@ pub mod temperature;
 
 use crate::grid_plugin::{
     coordinate::{GameCoor, GridCoor},
-    grid::{Grid, X_SPACE},
+    grid::Grid,
 };
 use bevy::prelude::*;
 

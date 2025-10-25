@@ -5,7 +5,7 @@ use crate::{
     cube::compute_color,
     grid_plugin::{
         GridPlugin,
-        coordinate::{GameCoor, GridCoor},
+        coordinate::GameCoor,
         grid::{Grid, GridCell, X_SPACE, Y_SPACE},
     },
 };
@@ -95,9 +95,17 @@ fn update_cube(
         cube.nearest_cell = current_cell;
     }
     let temp = {
-        grid.get_value(GridCoor::from(GameCoor::from(cube.nearest_cell.top_right)))
-            .temperature
+        let temps_and_dists = grid.get_cell_temp(cube.nearest_cell, GameCoor::from(cube_coor));
+        temps_and_dists
+            .into_iter()
+            .map(|(temp, dist)| temp / (dist + 0.7))
+            .sum::<f32>()
+            * (temps_and_dists[0].1
+                + temps_and_dists[1].1
+                + temps_and_dists[2].1
+                + temps_and_dists[3].1)
     };
+    dbg!(temp);
     update_cube_color(materials, &cube.color_id, compute_color(temp));
     // TODO!
     // - Get the sub-grid The GridCells to compute the distace weighted temperature
