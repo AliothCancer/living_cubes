@@ -36,7 +36,7 @@ fn spawn_cube(
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
     let color_id = materials.add(ColorMaterial::from_color(Color::srgba(1.0, 1.0, 1.0, 1.0)));
-    let size = 30.0;
+    let size = 50.0;
     commands.spawn((
         Cube {
             color_id: color_id.clone(),
@@ -82,29 +82,19 @@ fn update_cube(
     let prev_cell = &cube.nearest_cell;
     if prev_cell != &current_cell {
         // dbg!(cube_coor);
-        info!("spawned new debug black cube");
-        commands.spawn((
-            Transform::from_xyz(
-                current_cell.bottom_left.x + X_SPACE / 2.,
-                current_cell.bottom_left.y + Y_SPACE / 2.,
-                -1.0,
-            ),
-            Mesh2d(meshes.add(Rectangle::new(X_SPACE, Y_SPACE))),
-            MeshMaterial2d(materials.add(Color::BLACK)),
-        ));
+        // info!("spawned new debug black cube");
+        // commands.spawn((
+        //     Transform::from_xyz(
+        //         current_cell.bottom_left.x + X_SPACE / 2.,
+        //         current_cell.bottom_left.y + Y_SPACE / 2.,
+        //         -1.0,
+        //     ),
+        //     Mesh2d(meshes.add(Rectangle::new(X_SPACE, Y_SPACE))),
+        //     MeshMaterial2d(materials.add(Color::BLACK)),
+        // ));
         cube.nearest_cell = current_cell;
     }
-    let temp = {
-        let temps_and_dists = grid.get_cell_temp(cube.nearest_cell, GameCoor::from(cube_coor));
-        temps_and_dists
-            .into_iter()
-            .map(|(temp, dist)| temp / (dist + 0.7))
-            .sum::<f32>()
-            * (temps_and_dists[0].1
-                + temps_and_dists[1].1
-                + temps_and_dists[2].1
-                + temps_and_dists[3].1)
-    };
+    let temp = grid.interpolate_temperature(current_cell, GameCoor::from(cube_coor));
     dbg!(temp);
     update_cube_color(materials, &cube.color_id, compute_color(temp));
     // TODO!

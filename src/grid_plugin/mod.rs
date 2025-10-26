@@ -8,6 +8,8 @@ use crate::grid_plugin::{
 };
 use bevy::prelude::*;
 
+const DEBUG_CUBE_SIZE: f32 = 30.0;
+
 pub struct GridPlugin;
 
 impl Plugin for GridPlugin {
@@ -27,7 +29,7 @@ fn setup(
         (
             DebugCube,
             Transform::from_xyz(cell.game_coor.x, cell.game_coor.y, 0.0),
-            Mesh2d(meshes.add(Rectangle::new(10.0, 10.0))),
+            Mesh2d(meshes.add(Rectangle::new(DEBUG_CUBE_SIZE, DEBUG_CUBE_SIZE))),
             MeshMaterial2d(cell.asset_id.clone()),
         )
     });

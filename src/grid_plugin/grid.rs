@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use ndarray::*;
+use ndarray_linalg::Inverse;
 use rand::rng;
 use rand_distr::{Distribution, Uniform};
 
@@ -34,12 +35,67 @@ pub struct GridCell {
     pub top_left: Vec2,
     pub top_right: Vec2,
 }
+impl GridCell {
+    pub fn points(&self) -> [Vec2; 4] {
+        [
+            self.bottom_left,
+            self.top_left,
+            self.top_right,
+            self.bottom_right,
+        ]
+    }
+}
+
 const LEFT: GridStep = GridStep { x: -1, y: 0 };
 const RIGHT: GridStep = GridStep { x: 1, y: 0 };
 const TOP: GridStep = GridStep { x: 0, y: 1 };
 const BOTTOM: GridStep = GridStep { x: 0, y: -1 };
 
+fn bilinear_interpolation(bil_coeffs: Array1<f32>, x: f32, y: f32) -> f32 {
+    bil_coeffs[0] + bil_coeffs[1] * x + bil_coeffs[2] * y + bil_coeffs[3] * x * y
+}
+
 impl Grid {
+    pub fn interpolate_temperature(&self, cell: GridCell, coor: GameCoor) -> f32 {
+        let points = cell.points();
+        let temps = Array1::from_iter(
+            points
+                .into_iter()
+                .map(|point| self.get_value(GridCoor::from(point)).temperature),
+        );
+        let coeffs = array![
+            [
+                1.0,
+                cell.bottom_left.x,
+                cell.bottom_left.y,
+                cell.bottom_left.x * cell.bottom_left.y
+            ],
+            [
+                1.0,
+                cell.top_left.x,
+                cell.top_left.y,
+                cell.top_left.x * cell.top_left.y
+            ],
+            [
+                1.0,
+                cell.top_right.x,
+                cell.top_right.y,
+                cell.top_right.x * cell.top_right.y
+            ],
+            [
+                1.0,
+                cell.bottom_right.x,
+                cell.bottom_right.y,
+                cell.bottom_right.x * cell.bottom_right.y
+            ],
+        ];
+        let bil_coeffs = dbg!(coeffs)
+            .inv()
+            .unwrap_or(Array::zeros((4, 4)))
+            // .expect("Problem while inverting matrix")
+            .dot(&temps);
+        bilinear_interpolation(bil_coeffs, coor.x, coor.y)
+    }
     pub fn get_cell_temp(&self, grid_cell: GridCell, coor: GameCoor) -> [(f32, f32); 4] {
         let temp_and_dist = |grid_cell_vertex: Vec2| {
             let grid_point = self.get_value(GridCoor::from(grid_cell.bottom_left));
