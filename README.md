@@ -5,7 +5,7 @@ This is the color map that will be used as the environment for entities on top. 
 This color transition is obtained using bilinear interpolation: every cell is delimited by 4 points, a point has (x,y) coordinate and a value of temperature.
 
 The equation used: `T(x,y) = a + b·x + c·y + d·x·y`
-a,b,c,d are computed using A^-1 dot (t1, t2, t3, t4)
+a,b,c,d are computed starting from the 4 cells point using A^-1 dot (t1, t2, t3, t4)
 
 Where A is the matrix of coefficients for a,b,c,d rispectively, so for example first row is:
 - point1: [1, x1, y1, x1 * y1]  
