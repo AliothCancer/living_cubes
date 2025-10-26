@@ -8,7 +8,9 @@ The equation used: `T(x,y) = a + b·x + c·y + d·x·y`
 a,b,c,d are computed starting from the 4 cells point using A^-1 dot (t1, t2, t3, t4)
 
 Where A is the matrix of coefficients for a,b,c,d rispectively, so for example first row is:
-- point1: [1, x1, y1, x1 * y1]  
+- point1: [1, x1, y1, x1 * y1]
+
+And t1..t4 are the corresponding temperatures.
 
 <img width="1401" height="1393" alt="image_2025-10-26_21-19-28" src="https://github.com/user-attachments/assets/833578c0-e8a1-4879-93dc-bda0c83d4d71" />
 <img width="1401" height="1393" alt="image_2025-10-26_21-20-24" src="https://github.com/user-attachments/assets/1ea0cfec-2458-4233-bdf7-bd106c69fa89" />
